@@ -50,15 +50,15 @@
 
 using namespace faiss;
 
-int d = 5;                            // dimension
-int nq = 2;                        // nb of queries
-int nprobe = 2;
+int d = 20;                            // dimension
+int nq = 10;                        // nb of queries
+int nprobe = 4;
 float *xb;
-long nb = 10;
+long nb = 1000;
 long size = d * nb;
-const char* filename = "1.index";
-int k = 10;
-const char* index_description = "IVF2,Flat";
+const char* filename = "2.index";
+int k = 5;
+const char* index_description = "IVF16,Flat";
 
 void
 GpuLoad(faiss::gpu::StandardGpuResources* res,
@@ -79,22 +79,22 @@ GpuLoad(faiss::gpu::StandardGpuResources* res,
 
 void
 GpuExecutor(
-    std::shared_ptr<faiss::Index>& gpu_index_ivf_ptr,
-    faiss::gpu::StandardGpuResources& res,
-    int device_id,
-    faiss::gpu::GpuClonerOptions* option,
-    faiss::IndexComposition* index_composition,
-    int nq,
-    int nprobe,
-    int k,
-    float* xq) {
+        std::shared_ptr<faiss::Index>& gpu_index_ivf_ptr,
+        faiss::gpu::StandardGpuResources& res,
+        int device_id,
+        faiss::gpu::GpuClonerOptions* option,
+        faiss::IndexComposition* index_composition,
+        int nq,
+        int nprobe,
+        int k,
+        float* xq) {
     double t0 = getmillisecs ();
     {
         long *I = new long[k * nq];
         float *D = new float[k * nq];
 
         auto* gpu_index_ivf_hybrid =
-            dynamic_cast<faiss::gpu::GpuIndexIVF*>(gpu_index_ivf_ptr.get());
+                dynamic_cast<faiss::gpu::GpuIndexIVF*>(gpu_index_ivf_ptr.get());
         gpu_index_ivf_hybrid->nprobe = nprobe;
         for(long i = 0; i < 1; ++ i) {
             double t2 = getmillisecs();
@@ -147,19 +147,19 @@ GpuExecutor(
 
 void
 CpuExecutor(
-    faiss::IndexComposition* index_composition,
-    int nq,
-    int nprobe,
-    int k,
-    float* xq,
-    faiss::Index *cpu_index) {
+        faiss::IndexComposition* index_composition,
+        int nq,
+        int nprobe,
+        int k,
+        float* xq,
+        faiss::Index *cpu_index) {
     printf("CPU: \n");
     long *I = new long[k * nq];
     float *D = new float[k * nq];
 
     double t4 = getmillisecs();
     faiss::IndexIVF* ivf_index =
-        dynamic_cast<faiss::IndexIVF*>(cpu_index);
+            dynamic_cast<faiss::IndexIVF*>(cpu_index);
     ivf_index->nprobe = nprobe;
 
 //    faiss::gpu::GpuIndexFlat* is_gpu_flat_index = dynamic_cast<faiss::gpu::GpuIndexFlat*>(ivf_index->quantizer);
@@ -280,33 +280,34 @@ int main() {
         cpu_ivf_index->to_readonly();
     }
 
-    faiss::gpu::GpuClonerOptions option0;
-
-    option0.allInGpu = true;
-
-    faiss::IndexComposition index_composition0;
-    index_composition0.index = cpu_index;
-    index_composition0.quantizer = nullptr;
-    index_composition0.mode = 1; // only quantizer
-
-    // Copy quantizer to GPU 0
-    auto index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
-    delete index1;
-
-    index_composition0.mode = 2; // only data
-
-    index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
-    delete index1;
-
-    for(long i = 0; i < 1; ++ i) {
-        std::shared_ptr<faiss::Index> gpu_index_ptr00;
-
-        GpuLoad(&res, 0, &option0, &index_composition0, std::ref(gpu_index_ptr00));
-
-        GpuExecutor(gpu_index_ptr00, res, 0, &option0, &index_composition0, nq, nprobe, k, xq);
-    }
+//    faiss::gpu::GpuClonerOptions option0;
+//
+//    option0.allInGpu = true;
+//
+//    faiss::IndexComposition index_composition0;
+//    index_composition0.index = cpu_index;
+//    index_composition0.quantizer = nullptr;
+//    index_composition0.mode = 1; // only quantizer
+//
+//    // Copy quantizer to GPU 0
+//    auto index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
+//    delete index1;
+//
+//    index_composition0.mode = 2; // only data
+//
+//    index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
+//    delete index1;
+//
+//    for(long i = 0; i < 1; ++ i) {
+//        std::shared_ptr<faiss::Index> gpu_index_ptr00;
+//
+//        GpuLoad(&res, 0, &option0, &index_composition0, std::ref(gpu_index_ptr00));
+//
+//        GpuExecutor(gpu_index_ptr00, res, 0, &option0, &index_composition0, nq, nprobe, k, xq);
+//    }
 
 //    CpuExecutor(&index_composition0, nq, nprobe, k, xq, cpu_index);
+    CpuExecutor(NULL, nq, nprobe, k, xq, cpu_index);
 
     delete [] xq;
     delete [] xb;
