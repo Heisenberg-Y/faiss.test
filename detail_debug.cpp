@@ -15,7 +15,7 @@
 #include "IndexIVF.h"
 #include "IndexFlat.h"
 #include "index_io.h"
-#include "gpu/GpuCloner.h"
+
 #include "gpu/GpuIndexFlat.h"
 #include "gpu/StandardGpuResources.h"
 #include "gpu/GpuAutoTune.h"
@@ -23,17 +23,12 @@
 #include "gpu/GpuIndexIVF.h"
 #include "gpu/GpuIndexIVFSQHybrid.h"
 
-#include "impl/FaissAssert.h"
-#include "impl/AuxIndexStructures.h"
-
 #include "IndexFlat.h"
 #include "VectorTransform.h"
 #include "IndexLSH.h"
 #include "IndexPQ.h"
-#include "index_factory.h"
 
 #include "IndexIVFPQ.h"
-#include "clone_index.h"
 #include "IndexIVFFlat.h"
 #include "IndexIVFSpectralHash.h"
 #include "MetaIndexes.h"
@@ -44,9 +39,10 @@
 #include "IndexBinaryFromFloat.h"
 #include "IndexBinaryHNSW.h"
 #include "IndexBinaryIVF.h"
-#include "utils/distances.h"
+#include "utils.h"
 
-#define verbose 0
+
+#define verbose 1
 
 using namespace faiss;
 
@@ -95,7 +91,7 @@ GpuExecutor(
 
         auto* gpu_index_ivf_hybrid =
             dynamic_cast<faiss::gpu::GpuIndexIVF*>(gpu_index_ivf_ptr.get());
-        gpu_index_ivf_hybrid->nprobe = nprobe;
+        gpu_index_ivf_hybrid->setNumProbes(nprobe);
         for(long i = 0; i < 1; ++ i) {
             double t2 = getmillisecs();
             gpu_index_ivf_ptr->search(nq, xq, k, D, I);

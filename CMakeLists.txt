@@ -3,7 +3,7 @@ project(faiss_test)
 
 set(CMAKE_CXX_STANDARD 14)
 
-include_directories("/home/heisenberg/Projects/faiss")
+include_directories("/home/heisenberg/Projects/Sub.Projects/faiss")
 include_directories(/usr/local/cuda/include)
 include_directories(/usr/local/hdf5/include)
 
@@ -14,7 +14,7 @@ add_executable(detail_debug detail_debug.cpp)
 add_executable(test_ivf test_ivf.cpp)
 
 set(libs
-        /home/heisenberg/Projects/faiss/libfaiss.a
+	/home/heisenberg/Projects/Sub.Projects/faiss/libfaiss.a
         gomp
         cudart
         cublas
