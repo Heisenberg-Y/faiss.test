@@ -11,6 +11,7 @@ link_directories(/usr/local/cuda/lib64)
 link_directories(/usr/local/hdf5/lib)
 
 add_executable(detail_debug detail_debug.cpp)
+add_executable(test_ivf test_ivf.cpp)
 
 set(libs
         /home/heisenberg/Projects/faiss/libfaiss.a
@@ -22,3 +23,4 @@ set(libs
         hdf5)
 
 target_link_libraries(detail_debug ${libs})
+target_link_libraries(test_ivf ${libs})
