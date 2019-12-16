@@ -46,19 +46,19 @@
 #include "IndexBinaryIVF.h"
 #include "utils/distances.h"
 
-#define verbose 0
+#define verbose 1
 
 using namespace faiss;
 
-int d = 5;                            // dimension
+int d = 10;                            // dimension
 int nq = 2;                        // nb of queries
 int nprobe = 2;
 float *xb;
-long nb = 10;
+long nb = 100;
 long size = d * nb;
 const char* filename = "1.index";
-int k = 10;
-const char* index_description = "IVF2,Flat";
+int k = 5;
+const char* index_description = "IVF4,Flat";
 
 void
 GpuLoad(faiss::gpu::StandardGpuResources* res,
@@ -275,38 +275,42 @@ int main() {
     printf("\n");
 #endif
 
-    cpu_ivf_index = dynamic_cast<faiss::IndexIVF*>(cpu_index);
-    if(cpu_ivf_index != nullptr) {
-        cpu_ivf_index->to_readonly();
-    }
+//    cpu_ivf_index = dynamic_cast<faiss::IndexIVF*>(cpu_index);
+//    if(cpu_ivf_index != nullptr) {
+//        cpu_ivf_index->to_readonly();
+//    }
 
-    faiss::gpu::GpuClonerOptions option0;
-
-    option0.allInGpu = true;
+//    auto tmp = dynamic_cast<faiss::ReadOnlyArrayInvertedLists *>(cpu_ivf_index->invlists);
+//    if(tmp != nullptr){
+//        printf("success\n");
+//    }
+//    faiss::gpu::GpuClonerOptions option0;
+//
+//    option0.allInGpu = true;
 
     faiss::IndexComposition index_composition0;
     index_composition0.index = cpu_index;
     index_composition0.quantizer = nullptr;
     index_composition0.mode = 1; // only quantizer
 
-    // Copy quantizer to GPU 0
-    auto index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
-    delete index1;
+//    // Copy quantizer to GPU 0
+//    auto index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
+//    delete index1;
+//
+//    index_composition0.mode = 2; // only data
+//
+//    index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
+//    delete index1;
+//
+//    for(long i = 0; i < 1; ++ i) {
+//        std::shared_ptr<faiss::Index> gpu_index_ptr00;
+//
+//        GpuLoad(&res, 0, &option0, &index_composition0, std::ref(gpu_index_ptr00));
+//
+//        GpuExecutor(gpu_index_ptr00, res, 0, &option0, &index_composition0, nq, nprobe, k, xq);
+//    }
 
-    index_composition0.mode = 2; // only data
-
-    index1 = faiss::gpu::index_cpu_to_gpu(&res, 0, &index_composition0, &option0);
-    delete index1;
-
-    for(long i = 0; i < 1; ++ i) {
-        std::shared_ptr<faiss::Index> gpu_index_ptr00;
-
-        GpuLoad(&res, 0, &option0, &index_composition0, std::ref(gpu_index_ptr00));
-
-        GpuExecutor(gpu_index_ptr00, res, 0, &option0, &index_composition0, nq, nprobe, k, xq);
-    }
-
-//    CpuExecutor(&index_composition0, nq, nprobe, k, xq, cpu_index);
+    CpuExecutor(&index_composition0, nq, nprobe, k, xq, cpu_index);
 
     delete [] xq;
     delete [] xb;
