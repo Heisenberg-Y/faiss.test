@@ -17,20 +17,22 @@
 #include <faiss/index_io.h>
 #include <faiss/Column.h>
 #include <faiss/utils/distances.h>
+#include <faiss/MetaIndexes.h>
 
-#define verbose 0
+#define verbose 1
 
 using namespace faiss;
 
-int d = 128;                            // dimension
-int nb = 2000000;                       // database size
-int nq = 20;                        // nb of queries
-int k = 10;
+int d = 8;                            // dimension
+int nb = 20;                       // database size
+int nq = 2;                        // nb of queries
+int k = 5;
 long size = d * nb;
 
 const char* filename = "5.index";
 const char *filecolumn = "5.column.index";
 float *xb = nullptr;
+int64_t *xids;
 
 void
 CpuExecutor(
@@ -38,13 +40,11 @@ CpuExecutor(
         int k,
         float* xq,
         faiss::Index *cpu_index,
-        ColumnSet &cs) {
+        ColumnSet *cs) {
     printf("CPU: \n");
     long *I = new long[k * nq];
     float *D = new float[k * nq];
 
-
-    auto flat_index = dynamic_cast<faiss::IndexFlat *>(cpu_index);
     double t4, t5;
 
     printf("--------------------------------------\n");
@@ -52,7 +52,7 @@ CpuExecutor(
 
     for (int i = 0; i < 1; ++i) {
         t4 = getmillisecs();
-        flat_index->search_conditional(nq, xq, k, D, I, cs);
+        cpu_index->search_conditional(nq, xq, k, D, I, (void *)(cs));
         t5 = getmillisecs();
         printf("CPU execution time: %0.2f\n", t5 - t4);
     }
@@ -78,7 +78,33 @@ CpuExecutor(
     }
 #endif
 
+    for (int i = 0; i < 1; ++i) {
+        t4 = getmillisecs();
+        cpu_index->search(nq, xq, k, D, I);
+        t5 = getmillisecs();
+        printf("CPU execution time: %0.2f\n", t5 - t4);
+    }
 
+#if verbose
+    printf("\n");
+    for (int m = 0; m < nq; ++m) {
+        printf("query %d:\n", m);
+        for (int j = 0; j < k; ++j) {
+            long idx = I[m * k + j];
+            printf("%2d. id = %2ld :", j, idx);
+            for (int i = 0; i < d; ++i) {
+                printf("%f ", xb[idx * d + i]);
+            }
+            printf(" distance = %f", D[m * k + j]);
+            float true_distance = 0;
+            for (int i = 0; i < d; ++i) {
+                true_distance += (xq[m * d + i] - xb[idx * d + i]) * (xq[m * d + i] - xb[idx * d + i]);
+            }
+            printf(" true = %f, true^2 = %f\n", sqrt(true_distance), true_distance);
+        }
+        printf("\n");
+    }
+#endif
 
     delete [] I;
     delete [] D;
@@ -88,7 +114,7 @@ int main() {
     faiss::ColumnSet *cs;
     if((access(filecolumn,F_OK))==-1){
         cs = new ColumnSet(nb, ColumnType::INT64, ColumnType::INT32, ColumnType::INT16, ColumnType::INT8, ColumnType::FLOAT, ColumnType::DOUBLE);
-        write_column_set(cs, filecolumn);
+//        write_column_set(cs, filecolumn);
     } else{
         cs = read_column_set(filecolumn);
     }
@@ -112,32 +138,38 @@ int main() {
             xq[d * i + j] = drand48();
     }
 
+    xids = new int64_t[nb];
+    for(int64_t i = 0; i < nb; i++){
+        xids[i] = i;
+    }
+
     if((access(filename, F_OK)) == -1){
-        faiss::Index *ori_index = new faiss::IndexFlatL2(d);
+        faiss::Index *index_flat = new faiss::IndexFlatL2(d);
+        auto ori_index = new faiss::IndexIDMap(reinterpret_cast<Index*>(index_flat));
 
         assert(ori_index->is_trained);
-        ori_index->add(nb, xb);  // add vectors to the index
+        ori_index->add_with_ids(nb, xb, xids);  // add vectors to the index
 
         printf("is_trained = %s\n", ori_index->is_trained ? "true" : "false");
         printf("ntotal = %ld\n", ori_index->ntotal);
 
         cpu_index = ori_index;
-        faiss::write_index(cpu_index, filename);
+//        faiss::write_index(cpu_index, filename);
         printf("index.index is stored successfully.\n");
     } else{
         cpu_index = faiss::read_index(filename);
     }
 
 #if verbose
-//    printf("\nbase dataset: \n");
-//    for (int l = 0; l < nb; ++l) {
-//        printf("%2d: ", l);
-//        for (int i = 0; i < d; ++i) {
-//            printf("%f ", xb[l * d + i]);
-//        }
-//        printf("\n");
-//    }
-//    printf("\n");
+    printf("\nbase dataset: \n");
+    for (int l = 0; l < nb; ++l) {
+        printf("%2d: ", l);
+        for (int i = 0; i < d; ++i) {
+            printf("%f ", xb[l * d + i]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 
 
     printf("\nquery dataset: \n");
@@ -151,7 +183,10 @@ int main() {
     printf("\n");
 #endif
 
-    CpuExecutor(nq, k, xq, cpu_index, *cs);
+    int64_t ids[2] = {6, 9};
+    cs->deleteByIds(2, ids, dynamic_cast<IndexIDMap *> (cpu_index));
+
+    CpuExecutor(nq, k, xq, cpu_index, cs);
 
     delete [] xb;
     delete [] xq;

@@ -18,6 +18,9 @@ add_executable(test_column_flat test_column_flat.cpp)
 add_executable(faiss_benchmark faiss_benchmark.cpp)
 add_executable(test_avx_512 test_avx_512.cpp)
 add_executable(get_cpu_flags get_cpu_flags.cpp)
+add_executable(test_column_ivfsq test_column_ivfsq.cpp)
+add_executable(test_accuracy test_accuracy.cpp)
+add_executable(test_performance test_performance.cpp)
 
 set(libs
         /home/heisenberg/Projects/faiss/libfaiss.a
@@ -36,3 +39,6 @@ target_link_libraries(test_column_flat ${libs})
 target_link_libraries(faiss_benchmark ${libs})
 target_link_libraries(test_avx_512 ${libs})
 target_link_libraries(get_cpu_flags ${libs})
+target_link_libraries(test_column_ivfsq ${libs})
+target_link_libraries(test_accuracy ${libs})
+target_link_libraries(test_performance ${libs})
